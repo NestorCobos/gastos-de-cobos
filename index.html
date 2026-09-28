@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101713">
+  <title>Saldo | Finanzas personales</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['DM Sans', 'sans-serif'], display: ['Manrope', 'sans-serif'] } } } };
+  </script>
+  <style>
+    :root { color-scheme: dark; --bg:#101713; --panel:#171f1b; --panel2:#1d2721; --line:#2a352e; --muted:#92a096; --text:#edf4ef; --accent:#9bf6bb; --accent-dark:#1e4731; --red:#ff8585; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; }
+    h1,h2,h3,.display { font-family:'Manrope',sans-serif; }
+    .surface { background:var(--panel); border:1px solid var(--line); }
+    .surface-soft { background:var(--panel2); border:1px solid var(--line); }
+    .muted { color:var(--muted); }
+    .accent { color:var(--accent); }
+    .field { width:100%; background:#111915; border:1px solid var(--line); border-radius:10px; padding:11px 13px; color:var(--text); outline:none; transition:border-color .2s,box-shadow .2s; }
+    .field:focus { border-color:#70d995; box-shadow:0 0 0 3px #9bf6bb1c; }
+    select.field option { background:#171f1b; }
+    .btn-primary { background:var(--accent); color:#102017; font-weight:700; transition:transform .18s,background .18s; }
+    .btn-primary:hover { background:#b0ffca; transform:translateY(-1px); }
+    .btn-quiet { border:1px solid var(--line); background:var(--panel); transition:background .18s,border-color .18s; }
+    .btn-quiet:hover { background:var(--panel2); border-color:#445348; }
+    .metric { animation:rise .55s both; }
+    .metric:nth-child(2) { animation-delay:.06s; }.metric:nth-child(3) { animation-delay:.12s; }.metric:nth-child(4) { animation-delay:.18s; }
+    @keyframes rise { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:translateY(0); } }
+    dialog { color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:0; width:min(480px,calc(100vw - 28px)); max-height:90vh; overflow:auto; box-shadow:0 24px 90px #0009; }
+    dialog::backdrop { background:#070c09b8; backdrop-filter:blur(4px); }
+    .toast { animation:toast-in .25s ease-out; }
+    @keyframes toast-in { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    .progress-track { height:8px; background:#2a352e; border-radius:99px; overflow:hidden; }
+    .progress-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,#73d993,#b5ffca); transition:width .5s ease; }
+    .table-row:hover { background:#ffffff05; }
+    input[type=date]::-webkit-calendar-picker-indicator { filter:invert(.8); }
+    .chart-wrap { height:250px; position:relative; }
+    .scrollbar::-webkit-scrollbar { width:6px; height:6px; }.scrollbar::-webkit-scrollbar-thumb { background:#344239; border-radius:8px; }
+    body.light { color-scheme:light; --bg:#f3f6f2; --panel:#fff; --panel2:#f7faf7; --line:#e1e9e2; --muted:#65736a; --text:#17221a; --accent:#197a42; --accent-dark:#e2f5e9; }
+    body.light .field { background:#fff; } body.light select.field option { background:white; color:#17221a; } body.light .progress-track { background:#e4ebe5; } body.light .toast { box-shadow:0 12px 35px #0002; }
+    body.light input[type=date]::-webkit-calendar-picker-indicator { filter:none; }
+    @media(max-width:640px) { .chart-wrap { height:220px; } }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen">
+    <header class="sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--bg)]/95 backdrop-blur-md">
+      <div class="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-3 sm:px-7 lg:px-10">
+        <a href="#inicio" class="flex items-center gap-3" aria-label="Saldo, inicio">
+          <span class="grid h-10 w-10 place-items-center rounded-xl bg-[#9bf6bb] text-[#102017]"><i class="fa-solid fa-leaf"></i></span>
+          <span><span class="display block text-lg font-extrabold leading-tight">saldo<span class="accent">.</span></span><span class="muted text-[10px] tracking-[.14em]">FINANZAS PERSONALES</span></span>
+        </a>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <span id="headerDate" class="muted hidden text-sm md:inline"></span>
+          <button id="themeToggle" class="btn-quiet grid h-10 w-10 place-items-center rounded-xl" title="Cambiar tema" aria-label="Cambiar tema"><i class="fa-regular fa-sun"></i></button>
+          <button id="addTransactionTop" class="btn-primary flex h-10 items-center gap-2 rounded-xl px-3 text-sm sm:px-4"><i class="fa-solid fa-plus"></i><span class="hidden sm:inline">Nueva transacción</span><span class="sm:hidden">Añadir</span></button>
+        </div>
+      </div>
+    </header>
+
+    <main id="inicio" class="mx-auto max-w-[1440px] px-4 pb-12 pt-7 sm:px-7 sm:pt-10 lg:px-10">
+      <section class="mb-7 flex flex-col justify-between gap-4 sm:mb-8 sm:flex-row sm:items-end">
+        <div><p class="accent mb-2 text-xs font-bold uppercase tracking-[.18em]">Tu dinero, con intención</p><h1 class="display text-2xl font-extrabold tracking-tight sm:text-3xl">Resumen financiero</h1><p class="muted mt-2 text-sm">Una mirada clara a tus movimientos y a lo que estás construyendo.</p></div>
+        <div class="flex items-center gap-2 self-start sm:self-auto"><span class="muted text-xs">Periodo</span><select id="periodFilter" class="field !w-auto !py-2 text-sm"><option value="month">Este mes</option><option value="all">Todo el tiempo</option></select></div>
+      </section>
+
+      <section class="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores financieros">
+        <article class="metric surface rounded-2xl p-5"><div class="flex items-center justify-between"><span class="muted text-sm">Ingresos</span><span class="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400/10 text-emerald-300"><i class="fa-solid fa-arrow-down"></i></span></div><p id="incomeTotal" class="display mt-4 text-2xl font-extrabold">$0</p><p class="muted mt-1 text-xs">Entradas del periodo</p></article>
+        <article class="metric surface rounded-2xl p-5"><div class="flex items-center justify-between"><span class="muted text-sm">Gastos</span><span class="grid h-9 w-9 place-items-center rounded-xl bg-rose-400/10 text-rose-300"><i class="fa-solid fa-arrow-up"></i></span></div><p id="expenseTotal" class="display mt-4 text-2xl font-extrabold">$0</p><p class="muted mt-1 text-xs">Salidas del periodo</p></article>
+        <article class="metric surface rounded-2xl p-5"><div class="flex items-center justify-between"><span class="muted text-sm">Balance neto</span><span class="grid h-9 w-9 place-items-center rounded-xl bg-lime-300/10 text-lime-300"><i class="fa-solid fa-scale-balanced"></i></span></div><p id="balanceTotal" class="display mt-4 text-2xl font-extrabold">$0</p><p class="muted mt-1 text-xs">Ingresos menos gastos</p></article>
+        <article class="metric surface rounded-2xl p-5"><div class="flex items-center justify-between"><span class="muted text-sm">Tasa de ahorro</span><span class="grid h-9 w-9 place-items-center rounded-xl bg-teal-300/10 text-teal-300"><i class="fa-solid fa-chart-line"></i></span></div><p id="savingsRate" class="display mt-4 text-2xl font-extrabold">0%</p><p class="muted mt-1 text-xs">Balance sobre ingresos</p></article>
+      </section>
+
+      <section class="mb-7 grid grid-cols-1 gap-4 xl:grid-cols-5">
+        <article class="surface rounded-2xl p-5 sm:p-6 xl:col-span-3"><div class="mb-5 flex items-center justify-between"><div><h2 class="font-bold">Flujo de efectivo</h2><p class="muted mt-1 text-xs">Ingresos y gastos por mes</p></div><span class="muted text-xs"><i class="fa-solid fa-circle mr-1 text-emerald-300"></i>Ingresos <i class="fa-solid fa-circle ml-3 mr-1 text-rose-300"></i>Gastos</span></div><div class="chart-wrap"><canvas id="flowChart" aria-label="Gráfico de ingresos y gastos"></canvas></div></article>
+        <article class="surface rounded-2xl p-5 sm:p-6 xl:col-span-2"><div class="mb-5"><h2 class="font-bold">En qué gastas</h2><p class="muted mt-1 text-xs">Distribución por categoría</p></div><div class="chart-wrap"><canvas id="categoryChart" aria-label="Gráfico de gastos por categoría"></canvas></div><p id="emptyChart" class="muted mt-2 hidden text-center text-xs">Añade gastos para ver tu distribución.</p></article>
+      </section>
+
+      <section class="mb-7 grid grid-cols-1 gap-4 xl:grid-cols-5">
+        <article class="surface rounded-2xl p-5 sm:p-6 xl:col-span-3">
+          <div class="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h2 class="font-bold">Movimientos recientes</h2><p class="muted mt-1 text-xs">Consulta y organiza tus transacciones</p></div><button id="addTransaction" class="btn-quiet flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm"><i class="fa-solid fa-plus accent"></i>Añadir movimiento</button></div>
+          <div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3"><input id="searchFilter" class="field col-span-2 !py-2 text-sm sm:col-span-1" type="search" placeholder="Buscar movimiento..." aria-label="Buscar transacciones"><select id="typeFilter" class="field !py-2 text-sm"><option value="all">Todos los tipos</option><option value="income">Ingresos</option><option value="expense">Gastos</option></select><select id="categoryFilter" class="field col-span-2 !py-2 text-sm sm:col-span-1"><option value="all">Todas las categorías</option></select></div>
+          <div class="scrollbar overflow-x-auto"><table class="w-full min-w-[570px] text-left text-sm"><thead><tr class="muted border-b border-[var(--line)] text-xs"><th class="pb-3 font-medium">Movimiento</th><th class="pb-3 font-medium">Categoría</th><th class="pb-3 font-medium">Fecha</th><th class="pb-3 text-right font-medium">Monto</th><th class="pb-3"></th></tr></thead><tbody id="transactionRows"></tbody></table><div id="emptyTransactions" class="muted hidden py-10 text-center text-sm">No hay movimientos para mostrar.</div></div>
+        </article>
+
+        <article class="surface rounded-2xl p-5 sm:p-6 xl:col-span-2"><div class="mb-4 flex items-start justify-between gap-3"><div><h2 class="font-bold">Metas de ahorro</h2><p class="muted mt-1 text-xs">Convierte tus planes en progreso</p></div><button id="addGoal" class="btn-quiet grid h-9 w-9 shrink-0 place-items-center rounded-lg" title="Crear meta" aria-label="Crear meta"><i class="fa-solid fa-plus accent"></i></button></div>
+          <div id="goalSummary" class="mb-4 rounded-xl border border-emerald-300/15 bg-emerald-300/[.06] p-3"><div class="flex items-start gap-3"><i class="fa-solid fa-wand-magic-sparkles accent mt-1"></i><div><p id="monthlyPlan" class="text-sm font-semibold">Calculando tu plan...</p><p id="savingsAdvice" class="muted mt-1 text-xs"></p></div></div></div>
+          <div id="goalList" class="space-y-3"></div><div id="emptyGoals" class="muted hidden rounded-xl border border-dashed border-[var(--line)] py-7 text-center text-sm">Crea una meta para empezar a ahorrar con propósito.</div>
+          <div id="allocationInfo" class="muted mt-4 border-t border-[var(--line)] pt-3 text-xs"></div>
+        </article>
+      </section>
+      <footer class="muted flex flex-col justify-between gap-2 border-t border-[var(--line)] pt-5 text-xs sm:flex-row"><span>Hecho para tomar mejores decisiones, un movimiento a la vez.</span><button id="resetData" class="self-start transition hover:text-[var(--text)]">Restablecer datos de ejemplo</button></footer>
+    </main>
+  </div>
+
+  <dialog id="transactionDialog"><form id="transactionForm" class="p-5 sm:p-6"><div class="mb-5 flex items-center justify-between"><div><h2 class="display text-lg font-bold">Nueva transacción</h2><p class="muted mt-1 text-xs">Registra un ingreso o un gasto.</p></div><button type="button" class="closeDialog btn-quiet grid h-9 w-9 place-items-center rounded-lg" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button></div><div class="space-y-4"><label class="block text-sm">Tipo<select name="type" id="transactionType" class="field mt-1.5"><option value="expense">Gasto</option><option value="income">Ingreso</option></select></label><label class="block text-sm">Categoría<select name="category" id="transactionCategory" class="field mt-1.5" required></select></label><label class="block text-sm">Monto<input class="field mt-1.5" name="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required></label><label class="block text-sm">Fecha<input class="field mt-1.5" name="date" id="transactionDate" type="date" required></label><label class="block text-sm">Descripción <span class="muted">(opcional)</span><input class="field mt-1.5" name="description" maxlength="90" placeholder="¿En qué consistió?"></label></div><div class="mt-6 flex justify-end gap-2"><button type="button" class="closeDialog btn-quiet rounded-lg px-4 py-2.5 text-sm">Cancelar</button><button class="btn-primary rounded-lg px-4 py-2.5 text-sm" type="submit">Guardar movimiento</button></div></form></dialog>
+
+  <dialog id="goalDialog"><form id="goalForm" class="p-5 sm:p-6"><div class="mb-5 flex items-center justify-between"><div><h2 class="display text-lg font-bold">Nueva meta</h2><p class="muted mt-1 text-xs">Ponle un nombre y una fecha a tu plan.</p></div><button type="button" class="closeDialog btn-quiet grid h-9 w-9 place-items-center rounded-lg" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button></div><div class="space-y-4"><label class="block text-sm">Nombre de la meta<input class="field mt-1.5" name="name" maxlength="48" placeholder="Ej. Fondo de emergencia" required></label><label class="block text-sm">Monto objetivo<input class="field mt-1.5" name="target" type="number" min="1" step="0.01" placeholder="0.00" required></label><label class="block text-sm">¿Cuánto tienes ahorrado?<input class="field mt-1.5" name="saved" type="number" min="0" step="0.01" value="0"></label><label class="block text-sm">Fecha objetivo<input class="field mt-1.5" name="deadline" type="date" required></label></div><div class="mt-6 flex justify-end gap-2"><button type="button" class="closeDialog btn-quiet rounded-lg px-4 py-2.5 text-sm">Cancelar</button><button class="btn-primary rounded-lg px-4 py-2.5 text-sm" type="submit">Crear meta</button></div></form></dialog>
+
+  <dialog id="contributionDialog"><form id="contributionForm" class="p-5 sm:p-6"><div class="mb-5 flex items-center justify-between"><div><h2 class="display text-lg font-bold">Aportar a tu meta</h2><p id="contributionGoalName" class="muted mt-1 text-xs"></p></div><button type="button" class="closeDialog btn-quiet grid h-9 w-9 place-items-center rounded-lg" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button></div><label class="block text-sm">Monto de la aportación<input class="field mt-1.5" name="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required></label><p class="muted mt-2 text-xs">La aportación se asigna a esta meta; no se registra como un gasto adicional.</p><div class="mt-6 flex justify-end gap-2"><button type="button" class="closeDialog btn-quiet rounded-lg px-4 py-2.5 text-sm">Cancelar</button><button class="btn-primary rounded-lg px-4 py-2.5 text-sm" type="submit">Añadir aporte</button></div></form></dialog>
+  <div id="toastRegion" class="pointer-events-none fixed bottom-4 right-4 z-50 space-y-2" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = 'saldo-finanzas-v1';
+      const CATEGORIES = ['Comida','Vivienda','Transporte','Ocio','Salud','Servicios','Educación','Salario','Freelance','Inversiones','Otros'];
+      const COLORS = ['#9bf6bb','#f6bd60','#84a9ff','#ff8585','#b79ced','#55c1b3','#ed8aa8','#8ecae6','#c3e88d','#f78c6c','#a8a29e'];
+      const today = new Date();
+      const dateOffset = (days) => { const date = new Date(); date.setDate(date.getDate() + days); return date.toISOString().slice(0,10); };
+      const monthDate = (offset, day) => { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() + offset); date.setDate(day); return date.toISOString().slice(0,10); };
+      const sampleData = {
+        transactions: [
+          {id:'tx1',type:'income',category:'Salario',amount:3850,date:monthDate(0,1),description:'Nómina mensual'},
+          {id:'tx2',type:'expense',category:'Vivienda',amount:1120,date:monthDate(0,2),description:'Renta'},
+          {id:'tx3',type:'expense',category:'Comida',amount:86.4,date:monthDate(0,4),description:'Supermercado'},
+          {id:'tx4',type:'expense',category:'Transporte',amount:48,date:monthDate(0,5),description:'Transporte público'},
+          {id:'tx5',type:'income',category:'Freelance',amount:420,date:monthDate(0,8),description:'Proyecto de diseño'},
+          {id:'tx6',type:'expense',category:'Servicios',amount:134.8,date:monthDate(0,9),description:'Luz e internet'},
+          {id:'tx7',type:'expense',category:'Ocio',amount:64,date:monthDate(0,11),description:'Cena con amigos'},
+          {id:'tx8',type:'expense',category:'Salud',amount:32,date:monthDate(0,13),description:'Farmacia'},
+          {id:'tx9',type:'income',category:'Inversiones',amount:95,date:monthDate(-1,18),description:'Rendimiento mensual'},
+          {id:'tx10',type:'expense',category:'Comida',amount:72,date:monthDate(-1,12),description:'Compra semanal'},
+          {id:'tx11',type:'income',category:'Salario',amount:3850,date:monthDate(-1,1),description:'Nómina mensual'},
+          {id:'tx12',type:'expense',category:'Vivienda',amount:1120,date:monthDate(-1,2),description:'Renta'},
+          {id:'tx13',type:'expense',category:'Transporte',amount:118,date:monthDate(-1,16),description:'Gasolina'}
+        ],
+        goals: [
+          {id:'goal1',name:'Fondo de emergencia',target:6000,saved:1800,deadline:dateOffset(210)},
+          {id:'goal2',name:'Viaje a Oaxaca',target:1800,saved:620,deadline:dateOffset(120)}
+        ]
+      };
+      let state;
+      try { state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || structuredClone(sampleData); } catch { state = structuredClone(sampleData); }
+      if (!Array.isArray(state.transactions) || !Array.isArray(state.goals)) state = structuredClone(sampleData);
+      let flowChart, categoryChart, activeGoalId = null;
+      const $ = (selector) => document.querySelector(selector);
+      const money = (amount) => new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0}).format(Number(amount)||0);
+      const moneyPrecise = (amount) => new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:2}).format(Number(amount)||0);
+      const safe = (value) => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+      const persist = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const showToast = (message, icon='fa-circle-check') => {
+        const toast = document.createElement('div'); toast.className = 'toast surface pointer-events-auto flex items-center gap-3 rounded-xl px-4 py-3 text-sm shadow-xl';
+        toast.innerHTML = `<i class="fa-solid ${icon} accent"></i><span>${safe(message)}</span>`; $('#toastRegion').append(toast); setTimeout(() => toast.remove(), 3200);
+      };
+      const isThisMonth = (date) => { const parsed = new Date(`${date}T12:00:00`); return parsed.getMonth() === today.getMonth() && parsed.getFullYear() === today.getFullYear(); };
+      const getPeriodTransactions = () => $('#periodFilter').value === 'all' ? state.transactions : state.transactions.filter(item => isThisMonth(item.date));
+      const daysRemaining = (deadline) => Math.max(1,Math.ceil((new Date(`${deadline}T23:59:59`) - new Date()) / 86400000));
+      const perMonth = (remaining, days) => remaining <= 0 ? 0 : remaining * 30.4375 / days;
+      const populateCategories = () => {
+        const transactionCategory = $('#transactionCategory');
+        const selected = transactionCategory.value;
+        transactionCategory.innerHTML = CATEGORIES.map(category => `<option>${safe(category)}</option>`).join('');
+        if (CATEGORIES.includes(selected)) transactionCategory.value = selected;
+        const categoryFilter = $('#categoryFilter');
+        const currentFilter = categoryFilter.value || 'all';
+        categoryFilter.innerHTML = '<option value="all">Todas las categorías</option>' + CATEGORIES.map(category => `<option value="${safe(category)}">${safe(category)}</option>`).join('');
+        categoryFilter.value = CATEGORIES.includes(currentFilter) ? currentFilter : 'all';
+      };
+      const renderTransactions = () => {
+        const query = $('#searchFilter').value.trim().toLowerCase();
+        const type = $('#typeFilter').value, category = $('#categoryFilter').value;
+        const list = [...getPeriodTransactions()].filter(item => (type === 'all' || item.type === type) && (category === 'all' || item.category === category) && (!query || `${item.description} ${item.category}`.toLowerCase().includes(query))).sort((a,b) => b.date.localeCompare(a.date));
+        $('#transactionRows').innerHTML = list.map(item => `<tr class="table-row border-b border-[var(--line)]/70"><td class="py-3.5"><div class="font-medium">${safe(item.description || item.category)}</div><div class="muted mt-0.5 text-xs">${item.type === 'income' ? 'Ingreso' : 'Gasto'}</div></td><td class="muted py-3.5">${safe(item.category)}</td><td class="muted py-3.5">${new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short'}).format(new Date(`${item.date}T12:00:00`))}</td><td class="py-3.5 text-right font-semibold ${item.type === 'income' ? 'text-emerald-300' : 'text-rose-300'}">${item.type === 'income' ? '+' : '-'}${moneyPrecise(item.amount)}</td><td class="py-3.5 pl-3 text-right"><button class="muted transition hover:text-rose-300" data-delete-transaction="${safe(item.id)}" aria-label="Eliminar transacción" title="Eliminar"><i class="fa-regular fa-trash-can"></i></button></td></tr>`).join('');
+        $('#emptyTransactions').classList.toggle('hidden',list.length !== 0);
+      };
+      const renderMetrics = () => {
+        const list = getPeriodTransactions();
+        const income = list.filter(item => item.type === 'income').reduce((sum,item) => sum + Number(item.amount),0);
+        const expense = list.filter(item => item.type === 'expense').reduce((sum,item) => sum + Number(item.amount),0);
+        const balance = income - expense;
+        $('#incomeTotal').textContent = money(income); $('#expenseTotal').textContent = money(expense); $('#balanceTotal').textContent = money(balance);
+        $('#balanceTotal').className = `display mt-4 text-2xl font-extrabold ${balance >= 0 ? 'text-emerald-300' : 'text-rose-300'}`;
+        $('#savingsRate').textContent = `${income ? Math.round(balance / income * 100) : 0}%`;
+        $('#savingsRate').className = `display mt-4 text-2xl font-extrabold ${balance >= 0 ? 'text-teal-300' : 'text-rose-300'}`;
+      };
+      const renderGoals = () => {
+        const goals = state.goals;
+        $('#emptyGoals').classList.toggle('hidden',goals.length !== 0);
+        $('#goalList').innerHTML = goals.map(goal => {
+          const progress = goal.target > 0 ? Math.min(100,goal.saved / goal.target * 100) : 0;
+          const remaining = Math.max(0,goal.target - goal.saved), days = daysRemaining(goal.deadline);
+          const monthly = perMonth(remaining,days), weekly = remaining <= 0 ? 0 : remaining * 7 / days;
+          const due = new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short',year:'numeric'}).format(new Date(`${goal.deadline}T12:00:00`));
+          return `<div class="surface-soft rounded-xl p-3.5"><div class="flex items-start justify-between gap-2"><div class="min-w-0"><p class="truncate text-sm font-semibold">${safe(goal.name)}</p><p class="muted mt-1 text-[11px]">Meta para ${due}</p></div><button class="muted shrink-0 p-1 transition hover:text-rose-300" data-delete-goal="${safe(goal.id)}" aria-label="Eliminar meta" title="Eliminar meta"><i class="fa-regular fa-trash-can"></i></button></div><div class="mt-3 flex items-baseline justify-between gap-2"><span class="text-sm font-bold">${money(goal.saved)} <span class="muted font-normal">/ ${money(goal.target)}</span></span><span class="accent text-xs font-bold">${Math.floor(progress)}%</span></div><div class="progress-track mt-2"><div class="progress-fill" style="width:${progress}%"></div></div><div class="mt-3 flex items-end justify-between gap-2"><p class="muted text-[11px] leading-relaxed">${remaining > 0 ? `Faltan <strong class="text-[var(--text)]">${money(remaining)}</strong><br>Ahorrar ${money(monthly)}/mes · ${money(weekly)}/semana` : '<strong class="accent">¡Meta alcanzada!</strong>'}</p><button class="btn-quiet shrink-0 rounded-lg px-2.5 py-2 text-xs" data-contribute="${safe(goal.id)}"><i class="fa-solid fa-plus mr-1 accent"></i>Aportar</button></div></div>`;
+        }).join('');
+        const monthlyTotal = goals.reduce((sum,goal) => sum + perMonth(Math.max(0,goal.target-goal.saved),daysRemaining(goal.deadline)),0);
+        $('#monthlyPlan').textContent = goals.length ? `Aparta ${money(monthlyTotal)} al mes para llegar a tus metas.` : 'Define una meta y calcularemos tu plan de ahorro.';
+        const net = state.transactions.reduce((sum,item) => sum + (item.type === 'income' ? Number(item.amount) : -Number(item.amount)),0);
+        const committed = goals.reduce((sum,goal) => sum + Number(goal.saved),0);
+        const unassigned = net - committed;
+        $('#savingsAdvice').textContent = goals.length ? `Equivale a ${money(monthlyTotal / 4.345)}/semana entre todas tus metas.` : 'Al añadir fecha objetivo sabrás cuánto ahorrar al mes y a la semana.';
+        $('#allocationInfo').innerHTML = `Balance neto acumulado: <strong class="text-[var(--text)]">${money(net)}</strong> · Asignado a metas: <strong class="text-[var(--text)]">${money(committed)}</strong> · Sin asignar: <strong class="${unassigned >= 0 ? 'accent' : 'text-rose-300'}">${money(unassigned)}</strong>`;
+      };
+      const chartTextColor = () => getComputedStyle(document.body).getPropertyValue('--muted').trim();
+      const chartGridColor = () => document.body.classList.contains('light') ? '#e9eee9' : '#29342d';
+      const renderCharts = () => {
+        const all = state.transactions;
+        const monthKeys = [];
+        for (let offset = 5; offset >= 0; offset--) { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth()-offset); monthKeys.push(`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`); }
+        const monthLabels = monthKeys.map(key => new Intl.DateTimeFormat('es-MX',{month:'short'}).format(new Date(`${key}-01T12:00:00`)));
+        const incomes = monthKeys.map(key => all.filter(item => item.type === 'income' && item.date.startsWith(key)).reduce((sum,item) => sum + Number(item.amount),0));
+        const expenses = monthKeys.map(key => all.filter(item => item.type === 'expense' && item.date.startsWith(key)).reduce((sum,item) => sum + Number(item.amount),0));
+        const spendByCategory = new Map(); getPeriodTransactions().filter(item => item.type === 'expense').forEach(item => spendByCategory.set(item.category,(spendByCategory.get(item.category)||0)+Number(item.amount)));
+        const common = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:document.body.classList.contains('light')?'#fff':'#202a23',titleColor:chartTextColor(),bodyColor:chartTextColor(),borderColor:chartGridColor(),borderWidth:1,callbacks:{label:context=>` ${moneyPrecise(context.raw)}`}}}};
+        if (flowChart) flowChart.destroy();
+        flowChart = new Chart($('#flowChart'),{type:'bar',data:{labels:monthLabels,datasets:[{label:'Ingresos',data:incomes,backgroundColor:'#80dfa0',borderRadius:5,maxBarThickness:26},{label:'Gastos',data:expenses,backgroundColor:'#f28b8b',borderRadius:5,maxBarThickness:26}]},options:{...common,scales:{x:{grid:{display:false},ticks:{color:chartTextColor()},border:{display:false}},y:{beginAtZero:true,grid:{color:chartGridColor()},ticks:{color:chartTextColor(),callback:value=>money(value)},border:{display:false}}}}});
+        if (categoryChart) categoryChart.destroy();
+        const labels = [...spendByCategory.keys()];
+        categoryChart = new Chart($('#categoryChart'),{type:'doughnut',data:{labels,datasets:[{data:[...spendByCategory.values()],backgroundColor:labels.map(label=>COLORS[CATEGORIES.indexOf(label)%COLORS.length]),borderColor:document.body.classList.contains('light')?'#fff':'#171f1b',borderWidth:3,hoverOffset:5}]},options:{...common,cutout:'70%',plugins:{...common.plugins,legend:{display:true,position:'right',labels:{color:chartTextColor(),usePointStyle:true,pointStyle:'circle',boxWidth:7,padding:12,font:{family:'DM Sans',size:11}}}}}});
+        $('#emptyChart').classList.toggle('hidden',labels.length !== 0);
+      };
+      const render = () => { populateCategories(); renderMetrics(); renderTransactions(); renderGoals(); renderCharts(); };
+      const openDialog = (dialog) => dialog.showModal();
+      $('#headerDate').textContent = new Intl.DateTimeFormat('es-MX',{weekday:'short',day:'numeric',month:'long'}).format(today);
+      $('#transactionDate').value = dateOffset(0);
+      $('#addTransaction').addEventListener('click',()=>openDialog($('#transactionDialog')));
+      $('#addTransactionTop').addEventListener('click',()=>openDialog($('#transactionDialog')));
+      $('#addGoal').addEventListener('click',()=>{ const input=$('#goalForm').elements.deadline; input.min=dateOffset(0); input.value=dateOffset(90); openDialog($('#goalDialog')); });
+      document.querySelectorAll('.closeDialog').forEach(button=>button.addEventListener('click',()=>button.closest('dialog').close()));
+      document.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();}));
+      $('#transactionType').addEventListener('change',()=>{ const type=$('#transactionType').value; const options=type==='income'?['Salario','Freelance','Inversiones','Otros']:CATEGORIES.filter(category=>!['Salario','Freelance','Inversiones'].includes(category)); $('#transactionCategory').innerHTML=options.map(category=>`<option>${safe(category)}</option>`).join(''); });
+      $('#transactionForm').addEventListener('submit',event=>{ event.preventDefault(); const data=new FormData(event.currentTarget); state.transactions.push({id:crypto.randomUUID(),type:data.get('type'),category:data.get('category'),amount:Number(data.get('amount')),date:data.get('date'),description:String(data.get('description')).trim()}); persist(); event.currentTarget.reset(); $('#transactionDate').value=dateOffset(0); $('#transactionType').value='expense'; $('#transactionType').dispatchEvent(new Event('change')); $('#transactionDialog').close(); render(); showToast('Transacción añadida.'); });
+      $('#goalForm').addEventListener('submit',event=>{ event.preventDefault(); const data=new FormData(event.currentTarget); state.goals.push({id:crypto.randomUUID(),name:String(data.get('name')).trim(),target:Number(data.get('target')),saved:Number(data.get('saved'))||0,deadline:data.get('deadline')}); persist(); event.currentTarget.reset(); $('#goalDialog').close(); render(); showToast('Meta de ahorro creada.'); });
+      $('#goalList').addEventListener('click',event=>{ const contribute=event.target.closest('[data-contribute]'); if(contribute){activeGoalId=contribute.dataset.contribute; const goal=state.goals.find(item=>item.id===activeGoalId); if(!goal)return; $('#contributionGoalName').textContent=`${goal.name} · faltan ${money(Math.max(0,goal.target-goal.saved))}`; const amount=$('#contributionForm').elements.amount; amount.max=Math.max(.01,goal.target-goal.saved); openDialog($('#contributionDialog')); return;} const remove=event.target.closest('[data-delete-goal]'); if(remove){const goal=state.goals.find(item=>item.id===remove.dataset.deleteGoal); if(goal&&confirm(`¿Eliminar la meta «${goal.name}»?`)){state.goals=state.goals.filter(item=>item.id!==goal.id);persist();render();showToast('Meta eliminada.','fa-trash-can');}} });
+      $('#contributionForm').addEventListener('submit',event=>{event.preventDefault();const amount=Number(new FormData(event.currentTarget).get('amount'));const goal=state.goals.find(item=>item.id===activeGoalId);if(!goal)return;goal.saved=Math.min(goal.target,goal.saved+amount);persist();event.currentTarget.reset();$('#contributionDialog').close();render();showToast('Aporte añadido a tu meta.');});
+      $('#transactionRows').addEventListener('click',event=>{const button=event.target.closest('[data-delete-transaction]');if(!button)return;const transaction=state.transactions.find(item=>item.id===button.dataset.deleteTransaction);if(transaction&&confirm(`¿Eliminar «${transaction.description||transaction.category}»?`)){state.transactions=state.transactions.filter(item=>item.id!==transaction.id);persist();render();showToast('Transacción eliminada.','fa-trash-can');}});
+      ['periodFilter','typeFilter','categoryFilter'].forEach(id=>$('#'+id).addEventListener('change',render));
+      $('#searchFilter').addEventListener('input',renderTransactions);
+      $('#themeToggle').addEventListener('click',()=>{document.body.classList.toggle('light');localStorage.setItem('saldo-theme',document.body.classList.contains('light')?'light':'dark');renderCharts();});
+      if(localStorage.getItem('saldo-theme')==='light')document.body.classList.add('light');
+      $('#resetData').addEventListener('click',()=>{if(confirm('Esto reemplazará tus transacciones y metas actuales con los datos de ejemplo. ¿Continuar?')){state=structuredClone(sampleData);persist();render();showToast('Datos de ejemplo restaurados.');}});
+      persist();
+      render();
+    })();
+  </script>
+</body>
+</html>
